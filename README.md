@@ -51,13 +51,21 @@ prithivMLmods/Dog-Breed-120 from Hugging Face 🤗
 ### 🗂️ Project Structure
 
 project/
+
 ├── app.py # Main Flask app
+
 ├── Dockerfile
+
 ├── requirements.txt
+
 ├── templates/
+
 │ └── index.html # Frontend UI
+
 ├── static/
+
 │ └── style.css # Optional styling
+
 └── README.md
 
 ### 🔐 Notes
