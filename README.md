@@ -33,7 +33,7 @@ Docker installed
 
 Clone the repository
 
-1.  git clone https://github.com/yourusername/dog-breed-app.git
+1.  git clone https://github.com/Deep-KALYAN/dog-breed-app.git
     cd dog-breed-app
 2.  Build the Docker image
     docker build -t dog-breed-app .
