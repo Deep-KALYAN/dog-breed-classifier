@@ -1,37 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
+  <meta charset="utf-8" />
   <title>Dog Breed Classifier</title>
   <style>
     body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-    #output img { max-width: 300px; margin-top: 20px; }
-    .prediction { margin: 5px 0; font-size: 18px; }
+    #output img { max-width: 320px; margin-top: 16px; border-radius: 8px; }
+    .prediction { margin: 6px 0; font-size: 18px; }
+    .error { color: #b00020; margin-top: 12px; }
+    .loading { opacity: 0.6; pointer-events: none; }
   </style>
 </head>
 <body>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <h1>🐶 Dog Breed Classifier</h1>
+
   <form id="uploadForm">
-    <input type="file" id="imageFile" name="file" accept="image/*" required><br><br>
-    <button type="submit">Predict</button>
+    <input type="file" id="imageFile" name="file" accept="image/*" required />
+    <br><br>
+    <button id="btn" type="submit">Prédire</button>
   </form>
 
   <div id="output">
-    <img id="preview" src="#" alt="" style="display: none;">
+    <img id="preview" src="#" alt="" style="display:none;" />
     <div id="predictions"></div>
+    <div id="error" class="error"></div>
   </div>
 
   <script>
     const form = document.getElementById('uploadForm');
+    const btn = document.getElementById('btn');
     const preview = document.getElementById('preview');
     const predictionsDiv = document.getElementById('predictions');
+    const errorDiv = document.getElementById('error');
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
+      errorDiv.textContent = '';
+      predictionsDiv.innerHTML = '';
 
       const fileInput = document.getElementById('imageFile');
       const file = fileInput.files[0];
+      if (!file) {
+        errorDiv.textContent = "Aucune image sélectionnée.";
+        return;
+      }
 
-      // Show image preview
+      // Aperçu
       const reader = new FileReader();
       reader.onload = () => {
         preview.src = reader.result;
@@ -39,23 +54,48 @@
       };
       reader.readAsDataURL(file);
 
-      const formData = new FormData();
-      formData.append('file', file);
+      // Désactiver UI pendant la requête
+      document.body.classList.add('loading');
+      btn.textContent = 'Prédiction en cours...';
 
-      const response = await fetch('/predict', {
-        method: 'POST',
-        body: formData
-      });
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
 
-      const predictions = await response.json();
-      predictionsDiv.innerHTML = '';
+        // Si front et back sont au même domaine: '/predict'
+        // Sinon, mets l’URL complète: 'http://127.0.0.1:5000/predict'
+        const resp = await fetch('/predict', { method: 'POST', body: formData });
 
-      predictions.forEach(pred => {
-        const p = document.createElement('div');
-        p.className = 'prediction';
-        p.textContent = `${pred.label} → ${(pred.score * 100).toFixed(2)}%`;
-        predictionsDiv.appendChild(p);
-      });
+        if (!resp.ok) {
+          // Essayer de lire le message d’erreur JSON si dispo
+          let msg = `Erreur serveur (${resp.status})`;
+          try { const ejson = await resp.json(); if (ejson.error) msg = ejson.error; } catch {}
+          throw new Error(msg);
+        }
+
+        const data = await resp.json();
+
+        // ⚠️ ICI la réponse de l’API est { predictions: [...] }
+        const predictions = Array.isArray(data) ? data : (data.predictions || []);
+
+        if (!predictions.length) {
+          errorDiv.textContent = "Pas de prédictions retournées.";
+          return;
+        }
+
+        predictionsDiv.innerHTML = '';
+        predictions.forEach(pred => {
+          const p = document.createElement('div');
+          p.className = 'prediction';
+          p.textContent = `${pred.label} → ${(pred.score * 100).toFixed(2)}%`;
+          predictionsDiv.appendChild(p);
+        });
+      } catch (err) {
+        errorDiv.textContent = err.message || 'Erreur inconnue.';
+      } finally {
+        document.body.classList.remove('loading');
+        btn.textContent = 'Prédire';
+      }
     });
   </script>
 </body>
