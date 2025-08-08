@@ -3,100 +3,180 @@
 <head>
   <meta charset="utf-8" />
   <title>Dog Breed Classifier</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
-    #output img { max-width: 320px; margin-top: 16px; border-radius: 8px; }
-    .prediction { margin: 6px 0; font-size: 18px; }
-    .error { color: #b00020; margin-top: 12px; }
-    .loading { opacity: 0.6; pointer-events: none; }
-  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <!-- Chart.js uniquement si tu veux le camembert -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <h1>🐶 Dog Breed Classifier</h1>
 
-  <form id="uploadForm">
-    <input type="file" id="imageFile" name="file" accept="image/*" required />
-    <br><br>
-    <button id="btn" type="submit">Prédire</button>
-  </form>
+<form id="uploadForm" class="uploader">
+  <div id="dropzone" class="dropzone">
+    <input type="file" id="imageFile" name="file" accept="image/*" hidden>
+    <p class="drop-title">Déposez une image ici</p>
+    <p class="drop-sub">ou</p>
+    <label for="imageFile" class="btn primary">Choisir une image</label>
+    <p id="fileName" class="file-name">Aucun fichier choisi</p>
+  </div>
+
+  <button id="btn" type="submit" class="btn action">Prédire</button>
+</form>
+
 
   <div id="output">
     <img id="preview" src="#" alt="" style="display:none;" />
     <div id="predictions"></div>
+    <div class="chart-wrap" id="chartWrap" style="display:none;">
+      <canvas id="predChart" width="320" height="320"></canvas>
+    </div>
+
     <div id="error" class="error"></div>
   </div>
 
-  <script>
-    const form = document.getElementById('uploadForm');
-    const btn = document.getElementById('btn');
-    const preview = document.getElementById('preview');
-    const predictionsDiv = document.getElementById('predictions');
-    const errorDiv = document.getElementById('error');
+<script>
+  const form = document.getElementById('uploadForm');
+  const btn = document.getElementById('btn');
+  const preview = document.getElementById('preview');
+  const predictionsDiv = document.getElementById('predictions');
+  const errorDiv = document.getElementById('error');
+  const chartWrap = document.getElementById('chartWrap');
+  const chartCanvas = document.getElementById('predChart');
+  let chartInstance = null;
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      errorDiv.textContent = '';
-      predictionsDiv.innerHTML = '';
+  // -------- Utils --------
+  function formatLabel(raw) {
+    const afterDash = raw.split('-')[1] || raw;
+    const spaced = afterDash.replace(/_/g, ' ');
+    return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+  }
+  function resetUI() {
+    errorDiv.textContent = '';
+    predictionsDiv.innerHTML = '';
+    chartWrap.style.display = 'none';
+    if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  }
+  function renderChips(labels, scores) {
+    predictionsDiv.innerHTML = '';
+    labels.forEach((lbl, i) => {
+      const p = document.createElement('div');
+      p.className = 'prediction';
+      p.textContent = `${lbl} → ${scores[i].toFixed(2)}%`;
+      predictionsDiv.appendChild(p);
+    });
+  }
+  function renderChart(labels, scores) {
+    if (!window.Chart) return;
+    chartWrap.style.display = 'block';
+    const ctx = chartCanvas.getContext('2d');
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels,
+        datasets: [{
+          data: scores,
+          borderWidth: 2,
+          borderColor: '#fff',
+          backgroundColor: ['#42a5f5', '#ff6f91', '#ffb74d']
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: { callbacks: { label: t => `${t.label}: ${t.parsed}%` } }
+        }
+      }
+    });
+  }
 
-      const fileInput = document.getElementById('imageFile');
-      const file = fileInput.files[0];
-      if (!file) {
-        errorDiv.textContent = "Aucune image sélectionnée.";
+  // -------- Submit handler --------
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    resetUI();
+
+    const file = document.getElementById('imageFile').files[0];
+    if (!file) {
+      errorDiv.textContent = 'Aucune image sélectionnée.';
+      return;
+    }
+
+    // Aperçu
+    const reader = new FileReader();
+    reader.onload = () => {
+      preview.src = reader.result;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+
+    // Loading state
+    document.body.classList.add('loading');
+    btn.textContent = 'Prédiction en cours...';
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const resp = await fetch('/predict', { method: 'POST', body: formData });
+      if (!resp.ok) {
+        let msg = `Erreur serveur (${resp.status})`;
+        try { const ejson = await resp.json(); if (ejson.error) msg = ejson.error; } catch {}
+        throw new Error(msg);
+      }
+
+      const data = await resp.json();
+      const predictions = Array.isArray(data) ? data : (data.predictions || []);
+      if (!predictions.length) {
+        errorDiv.textContent = 'Pas de prédictions retournées.';
         return;
       }
 
-      // Aperçu
-      const reader = new FileReader();
-      reader.onload = () => {
-        preview.src = reader.result;
-        preview.style.display = 'block';
-      };
-      reader.readAsDataURL(file);
+      const labelsClean = predictions.map(p => formatLabel(p.label));
+      const scoresPct = predictions.map(p => +(p.score * 100).toFixed(2));
 
-      // Désactiver UI pendant la requête
-      document.body.classList.add('loading');
-      btn.textContent = 'Prédiction en cours...';
+      renderChips(labelsClean, scoresPct);
+      renderChart(labelsClean, scoresPct);
+    } catch (err) {
+      errorDiv.textContent = err.message || 'Erreur inconnue.';
+    } finally {
+      document.body.classList.remove('loading');
+      btn.textContent = 'Prédire';
+    }
+  });
+</script>
+<script>
+  const input = document.getElementById('imageFile');
+  const fileNameEl = document.getElementById('fileName');
+  const dropzone = document.getElementById('dropzone');
 
-      try {
-        const formData = new FormData();
-        formData.append('file', file);
+  // Afficher le nom du fichier choisi
+  input.addEventListener('change', () => {
+    fileNameEl.textContent = input.files[0] ? input.files[0].name : 'Aucun fichier choisi';
+  });
 
-        // Si front et back sont au même domaine: '/predict'
-        // Sinon, mets l’URL complète: 'http://127.0.0.1:5000/predict'
-        const resp = await fetch('/predict', { method: 'POST', body: formData });
+  // Drag & drop
+  ['dragenter','dragover'].forEach(evt =>
+    dropzone.addEventListener(evt, e => {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.add('dragover');
+    })
+  );
+  ['dragleave','drop'].forEach(evt =>
+    dropzone.addEventListener(evt, e => {
+      e.preventDefault(); e.stopPropagation();
+      dropzone.classList.remove('dragover');
+    })
+  );
+  dropzone.addEventListener('drop', e => {
+    const file = e.dataTransfer.files && e.dataTransfer.files[0];
+    if (file) {
+      input.files = e.dataTransfer.files; // attache au vrai input
+      fileNameEl.textContent = file.name;
+    }
+  });
+</script>
 
-        if (!resp.ok) {
-          // Essayer de lire le message d’erreur JSON si dispo
-          let msg = `Erreur serveur (${resp.status})`;
-          try { const ejson = await resp.json(); if (ejson.error) msg = ejson.error; } catch {}
-          throw new Error(msg);
-        }
 
-        const data = await resp.json();
-
-        // ⚠️ ICI la réponse de l’API est { predictions: [...] }
-        const predictions = Array.isArray(data) ? data : (data.predictions || []);
-
-        if (!predictions.length) {
-          errorDiv.textContent = "Pas de prédictions retournées.";
-          return;
-        }
-
-        predictionsDiv.innerHTML = '';
-        predictions.forEach(pred => {
-          const p = document.createElement('div');
-          p.className = 'prediction';
-          p.textContent = `${pred.label} → ${(pred.score * 100).toFixed(2)}%`;
-          predictionsDiv.appendChild(p);
-        });
-      } catch (err) {
-        errorDiv.textContent = err.message || 'Erreur inconnue.';
-      } finally {
-        document.body.classList.remove('loading');
-        btn.textContent = 'Prédire';
-      }
-    });
-  </script>
 </body>
 </html>
