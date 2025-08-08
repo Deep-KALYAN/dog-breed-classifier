@@ -1,87 +1,172 @@
-# 🐶 Dog Breed Prediction App
 
-This is a simple web application that allows you to upload a dog image or provide a URL to predict its breed using a pre-trained deep learning model from Hugging Face.
+# Find Your Dogo 
 
-Built with:
+Find Your Dogo est une application web qui permet d’identifier la race d’un chien à partir d’une photo.
+Elle s’appuie sur un modèle d’intelligence artificielle entraîné grâce au Transfer Learning à partir d’EfficientNetV2 sur un dataset de 20 580 images réparties en 120 races différentes.
+Le but est d'offrir un outil rapide et précis pour reconnaître la race d’un chien.
 
-- Python & Flask 🐍
 
-- Hugging Face Transformers 🤗
 
-- PyTorch
+## Architecture : EfficientNetV2B0 pré-entraîné sur ImageNet
 
-- Docker 🐳
+Nombre de classes : 120
 
-### 🚀 Features
+Précision top-1 : ~89 %
 
-- Upload an image from your device or
+Précision top-5 : ~99 %
 
-- Paste an image URL
+Dataset : 20k+ images organisées par race
 
-- Get the top 3 dog breed predictions
+## Technologies utilisées
+Backend : Flask (Python)
 
-- View:
+Modèle IA : TensorFlow / Keras
 
-Image, Bar chart & pie chart of predicted probabilities
+Frontend : HTML, CSS, JavaScript (Fetch API)
 
-### 📦 Requirements
+Serveur : API REST pour la prédiction
 
-Docker installed
-(No need to install Python, Pip, etc.)
+Entraînement : Transfer Learning + Fine-tuning
 
-### 🛠️ How to Run (Docker)
 
-Clone the repository
+# Lancement en Local
 
-1.  git clone https://github.com/Deep-KALYAN/dog-breed-app.git
-    cd dog-breed-app
-2.  Build the Docker image
-    docker build -t dog-breed-app .
-3.  Run the container
-    docker run -p 5000:5000 dog-breed-app
-4.  Visit the app
-    Open your browser and go to:
-    👉 http://localhost:5000
+Pour faire tourner le projet il faut : 
 
-### 🧠 Model
+### 1 Créer le venv
 
-This app uses the model:
-prithivMLmods/Dog-Breed-120 from Hugging Face 🤗
+```bash
+  python -m venv env
+``` 
+Ensuite : 
+```bash
+  env\Scripts\activate
+```
 
-### 🗂️ Project Structure
+### 2 Installer les dépendances
 
-project/
-
-├── app.py # Main Flask app
-
-├── Dockerfile
-
-├── requirements.txt
-
-├── templates/
-
-│ └── index.html # Frontend UI
-
-├── static/
-
-│ └── style.css # Optional styling
-
-└── README.md
-
-### 🔐 Notes
-
-For local files, only image formats like .jpg, .png are supported.
-
-For image URLs, make sure they are publicly accessible and end in an image format.
-
----
-
-If you don't want to use Docker
-▶️
-
-- Install required libraries:
-  pip install flask transformers torch pillow
-- Run the app:
+```bash
+  pip install -r requirements.txt
+```
+### 3 Lancer l'application
+```bash
   python app.py
-- Open your browser:
-  http://127.0.0.1:5000/
+```
+L’application sera accessible sur :
+```bash
+  http://127.0.0.1:5000
+```
+
+
+# Route API
+
+#### Faire une prédiction
+
+```http
+  POST /predict
+```
+
+| Parameter | Type     | Description                |
+| :-------- | :------- | :------------------------- |
+| `file` | `file` | Le lien vers votre fichier |
+
+**Type de réponse :** 
+```json
+{
+  "predictions": [
+    { "label": "golden_retriever", "score": 0.9981 },
+    { "label": "labrador_retriever", "score": 0.0015 },
+    { "label": "cocker_spaniel", "score": 0.0003 }
+  ]
+}
+```
+
+
+
+
+## Roadmap
+
+- ~~Faire un Modèle CNN~~
+
+- ~~Faire un Modèle Transfert Learning~~
+
+- ~~Faire un Backend~~
+
+- ~~Faire un Frontend~~
+
+- Ajouter un systeme pour mettre plusieurs image en meme temps
+
+- Améliorer le Modèle pour une précision parfaite
+
+- Embellir le Frontend
+
+
+# Authors
+
+## Chef de projet : Nicolas Draperi
+
+Modèle CNN :
+- Nicolas Draperi
+- Nail Benhamer
+
+Modèle Transfer Learning :
+- Nicolas Draperi
+- Deep Kalyan
+
+Backend :
+- Hugo Khaled Broton
+- Nicolas Draperi
+
+Frontend : 
+- Hugo Khaled Broton
+- Jules Capel
+
+
+## Information Supplémentaire
+
+### Structure du projet : 
+
+```bash
+dog-breed-classifier/
+├── notebooks/
+│   ├── berger.webp
+│   ├── best_finetune.keras
+│   ├── best_head.keras
+│   ├── class_names.json
+│   ├── DogBreedPredictionTrainingModdel.ipynb
+│   ├── DogBreedPredictionTransferLearning.ipynb
+│   ├── DogBreedsPredictionWithAlreadyTrainedModel.ipynb
+│   └── model_3_dogs_breeds.keras
+├── static/
+│   └── style.css
+├── templates/
+│   └── index.html
+├── .gitattributes
+├── app.py
+├── Dockerfile
+├── README.md
+└── requirements.txt
+``` 
+
+Fichier utilisé pour entrainer le model CNN :
+- notebooks/DogBreedPredictionTrainingModdel.ipynb
+  
+Fichier utilisé pour le Transfer Learning :
+- notebooks/DogBreedPredictionTransferLearning.ipynb
+  
+Modèle utilisé pour l'application :
+- notebooks/best_finetune.keras
+  
+Modèle non utilisé :
+- notebooks/best_head.keras
+- notebooks/model_3_dogs_breeds.keras
+  
+Fichier Principal : 
+- app.py
+
+
+
+
+
+
+
