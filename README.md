@@ -149,14 +149,18 @@ dog-breed-classifier/
 ``` 
 
 Fichier utilisé pour entrainer le model CNN :
-- notebooks/DogBreedPredictionTrainingModdel.ipynb 
+- notebooks/DogBreedPredictionTrainingModdel.ipynb
+  
 Fichier utilisé pour le Transfer Learning :
-- notebooks/DogBreedPredictionTransferLearning.ipynb 
+- notebooks/DogBreedPredictionTransferLearning.ipynb
+  
 Modèle utilisé pour l'application :
 - notebooks/best_finetune.keras
+  
 Modèle non utilisé :
 - notebooks/best_head.keras
 - notebooks/model_3_dogs_breeds.keras
+  
 Fichier Principal : 
 - app.py
 
