@@ -1,7 +1,7 @@
 
 # Find Your Dogo 
 
-Dog Breed Classifier est une application web qui permet d’identifier la race d’un chien à partir d’une photo.
+Find Your Dogo est une application web qui permet d’identifier la race d’un chien à partir d’une photo.
 Elle s’appuie sur un modèle d’intelligence artificielle entraîné grâce au Transfer Learning à partir d’EfficientNetV2 sur un dataset de 20 580 images réparties en 120 races différentes.
 Le but est d'offrir un outil rapide et précis pour reconnaître la race d’un chien.
 
